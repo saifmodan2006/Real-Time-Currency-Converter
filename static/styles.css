@@ -1,0 +1,26 @@
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.converter-card {
+  border-radius: 1rem;
+}
+
+.converter-card .card-body {
+  padding: 2rem;
+}
+
+.result-main {
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.result-sub {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 576px) {
+  .converter-card .card-body {
+    padding: 1.25rem;
+  }
+}

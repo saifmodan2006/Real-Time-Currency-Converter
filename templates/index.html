@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6 col-md-8">
+    <div class="card shadow converter-card">
+      <div class="card-body">
+        <h4 class="card-title mb-3 text-center">Convert Currencies in Real Time</h4>
+        <p class="text-muted small text-center mb-4">
+          Enter an amount, choose currencies, and see live conversion instantly.
+        </p>
+
+        <form id="converter-form" class="mb-3">
+          <div class="mb-3">
+            <label for="amount" class="form-label">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              class="form-control"
+              id="amount"
+              placeholder="Enter amount"
+              value="1"
+              required
+            >
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="from_currency" class="form-label">From</label>
+              <select id="from_currency" class="form-select">
+                {% for c in currencies %}
+                  <option value="{{ c }}"
+                    {% if c == default_from %}selected{% endif %}>
+                    {{ c }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="to_currency" class="form-label">To</label>
+              <select id="to_currency" class="form-select">
+                {% for c in currencies %}
+                  <option value="{{ c }}"
+                    {% if c == default_to %}selected{% endif %}>
+                    {{ c }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-between align-items-center">
+            <button type="button" id="swap-btn" class="btn btn-outline-secondary">
+              🔁 Swap
+            </button>
+            <button type="submit" class="btn btn-primary">
+              Convert
+            </button>
+          </div>
+        </form>
+
+        <div id="result-card" class="alert alert-primary d-none">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="result-main">
+                <span id="result-amount">0</span>
+                <span id="result-to-currency">INR</span>
+              </div>
+              <div class="result-sub text-muted small">
+                <span id="result-from-amount">0</span>
+                <span id="result-from-currency">USD</span>
+                =
+                <span id="result-single-rate">0</span>
+                <span id="result-to-currency-2">INR</span>
+              </div>
+            </div>
+            <div class="small text-muted text-end">
+              Live rate<br>
+              <span id="result-rate-info"></span>
+            </div>
+          </div>
+        </div>
+
+        <div id="error-box" class="alert alert-danger d-none small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById("converter-form");
+  const swapBtn = document.getElementById("swap-btn");
+  const fromSelect = document.getElementById("from_currency");
+  const toSelect = document.getElementById("to_currency");
+  const amountInput = document.getElementById("amount");
+
+  const resultCard = document.getElementById("result-card");
+  const errorBox = document.getElementById("error-box");
+
+  const resultAmount = document.getElementById("result-amount");
+  const resultToCurrency = document.getElementById("result-to-currency");
+  const resultFromAmount = document.getElementById("result-from-amount");
+  const resultFromCurrency = document.getElementById("result-from-currency");
+  const resultSingleRate = document.getElementById("result-single-rate");
+  const resultToCurrency2 = document.getElementById("result-to-currency-2");
+  const resultRateInfo = document.getElementById("result-rate-info");
+
+  // Swap currencies
+  swapBtn.addEventListener("click", () => {
+    const fromValue = fromSelect.value;
+    fromSelect.value = toSelect.value;
+    toSelect.value = fromValue;
+  });
+
+  // Handle form submit (AJAX)
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const fromCurrency = fromSelect.value;
+    const toCurrency = toSelect.value;
+    const amount = amountInput.value;
+
+    errorBox.classList.add("d-none");
+    resultCard.classList.add("d-none");
+
+    if (!amount || parseFloat(amount) < 0) {
+      showError("Please enter a valid amount.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/convert", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from_currency: fromCurrency,
+          to_currency: toCurrency,
+          amount: amount
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        showError(data.error || "Something went wrong.");
+        return;
+      }
+
+      updateResult(data);
+    } catch (err) {
+      console.error(err);
+      showError("Network error. Please try again.");
+    }
+  });
+
+  function showError(msg) {
+    errorBox.textContent = msg;
+    errorBox.classList.remove("d-none");
+  }
+
+  function updateResult(data) {
+    const converted = data.converted_amount;
+    const rate = data.rate;
+
+    resultAmount.textContent = converted.toFixed(2);
+    resultToCurrency.textContent = data.to_currency;
+
+    resultFromAmount.textContent = data.amount;
+    resultFromCurrency.textContent = data.from_currency;
+
+    resultSingleRate.textContent = rate.toFixed(4);
+    resultToCurrency2.textContent = data.to_currency;
+
+    resultRateInfo.textContent =
+      `1 ${data.from_currency} = ${rate.toFixed(4)} ${data.to_currency}`;
+
+    resultCard.classList.remove("d-none");
+  }
+</script>
+{% endblock %}
